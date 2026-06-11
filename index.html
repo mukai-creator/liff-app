@@ -149,7 +149,7 @@
       currentTicketId = null;
     }
 
-    // 3. 消込するボタンを押した時（パスワードチェックと消込通信）
+// 3. 消込するボタンを押した時（パスワードチェックと消込通信）
     function confirmPin() {
       const STAFF_PIN = '1234'; // ★ここを医院でお好きな4桁の数字に変更してください
       const userInput = document.getElementById('pin-input').value;
@@ -159,7 +159,10 @@
         return;
       }
 
-      // パスワードが合っていたらポップアップを閉じる
+      // ★修正ポイント：画面を閉じて記憶が消える前に、別の変数にIDを避難させておく！
+      const requestTicketId = currentTicketId;
+
+      // パスワードが合っていたらポップアップを閉じる（※ここでcurrentTicketIdはnullになります）
       closePinModal();
 
       // 消込通信処理のスタート
@@ -170,7 +173,7 @@
       const payload = {
         action: 'useTicket',
         idToken: idToken,
-        ticketId: currentTicketId
+        ticketId: requestTicketId // ★避難させておいたIDを使って通信する
       };
 
       fetch(GAS_URL, {
