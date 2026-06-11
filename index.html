@@ -29,18 +29,18 @@
   <div id="ticket-list"></div>
 
   <script>
-    // ★GASのウェブアプリURLをここに貼り付けます
+    // GASのウェブアプリURL
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbxXd8NMotfbSP-uZMMNYtOYiKHmxu4v1X2qogZqhn8oLE3HOD5G2nLdYGGXnYZHLB4O/exec';
     
-    // ★後でLINE Developersで取得するLIFF IDをここに貼り付けます
+    // LIFF ID
     const LIFF_ID = '2010364442-cKVekudo';
 
-    // 画面読み込み時にLIFFを初期化
+    // 1. 画面読み込み時にLIFFを初期化
     document.addEventListener("DOMContentLoaded", () => {
       liff.init({ liffId: LIFF_ID })
         .then(() => {
           if (!liff.isLoggedIn()) {
-            liff.login(); // LINE外で開かれた場合はログイン画面へ
+            liff.login(); 
           } else {
             fetchTickets(); // ログイン済みならチケットを取得
           }
@@ -51,12 +51,64 @@
         });
     });
 
-    // チケット使用ボタンを押した時の本番処理（パスワード確認付き）
-    function useTicket(ticketId) {
-      // 1. スタッフ専用のパスワード（暗証番号）を設定
-      const STAFF_PIN = '1234'; // ★ここを医院でお好きな4桁の数字に変更してください
+    // 2. 【復活】GASからチケット情報を取得する関数
+    function fetchTickets() {
+      const idToken = liff.getIDToken(); 
 
-      // 2. パスワード入力用ポップアップを表示
+      const payload = {
+        action: 'getTickets',
+        idToken: idToken
+      };
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+        renderTickets(data.tickets);
+      })
+      .catch(error => {
+        console.error(error);
+        document.getElementById('loading').innerText = 'データの取得に失敗しました';
+      });
+    }
+
+    // 3. 取得したチケットをHTMLに描画する関数
+    function renderTickets(tickets) {
+      const listDiv = document.getElementById('ticket-list');
+      listDiv.innerHTML = ''; // 画面を一度クリアする（重複表示防止）
+
+      if (tickets.length === 0) {
+        listDiv.innerHTML = '<p>現在使用できるチケットはありません。</p>';
+        return;
+      }
+
+      tickets.forEach(ticket => {
+        const card = document.createElement('div');
+        card.className = 'ticket-card';
+        card.innerHTML = `
+          <div class="ticket-title">${ticket.title}</div>
+          <div class="ticket-expiry">有効期限: ${ticket.expiry_date}</div>
+          <button class="use-btn" onclick="useTicket('${ticket.ticket_id}')">使用する</button>
+        `;
+        listDiv.appendChild(card);
+      });
+    }
+
+    // 4. チケット使用ボタンを押した時の本番処理（パスワード確認付き）
+    function useTicket(ticketId) {
+      // スタッフ専用のパスワード（暗証番号）を設定
+      const STAFF_PIN = '1234'; 
+
+      // パスワード入力用ポップアップを表示
       const userInput = prompt('【スタッフ専用】\n消込を行うための4桁の暗証番号を入力してください。\n※使用済みにすると元に戻せません。');
 
       // キャンセルを押した、または何も入力しなかった場合は処理を中断
@@ -64,13 +116,11 @@
         return; 
       }
 
-      // 3. パスワードが間違っている場合はエラーを出して中断
+      // パスワードが間違っている場合はエラーを出して中断
       if (userInput !== STAFF_PIN) {
         alert('暗証番号が間違っています。消込をキャンセルしました。');
         return;
       }
-
-      // ======== ここから下は前回と同じ消込通信処理 ========
 
       // 処理中の表示
       document.getElementById('loading').style.display = 'block';
@@ -108,33 +158,6 @@
         alert('通信エラーが発生しました');
         document.getElementById('loading').style.display = 'none';
       });
-    }
-
-    // 取得したチケットをHTMLに描画する関数
-    function renderTickets(tickets) {
-      const listDiv = document.getElementById('ticket-list');
-      if (tickets.length === 0) {
-        listDiv.innerHTML = '<p>現在使用できるチケットはありません。</p>';
-        return;
-      }
-
-      tickets.forEach(ticket => {
-        const card = document.createElement('div');
-        card.className = 'ticket-card';
-        card.innerHTML = `
-          <div class="ticket-title">${ticket.title}</div>
-          <div class="ticket-expiry">有効期限: ${ticket.expiry_date}</div>
-          <button class="use-btn" onclick="useTicket('${ticket.ticket_id}')">使用する</button>
-        `;
-        listDiv.appendChild(card);
-      });
-    }
-
-    // チケット使用ボタンを押した時の処理（今回はアラート表示のみの仮実装）
-    function useTicket(ticketId) {
-      if (confirm('スタッフの目の前で「OK」を押してください。')) {
-        alert('チケットID: ' + ticketId + ' の消込処理をGASに送ります（※消込ロジックは次回実装します！）');
-      }
     }
   </script>
 </body>
