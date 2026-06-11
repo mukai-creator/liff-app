@@ -51,36 +51,62 @@
         });
     });
 
-    // GASからチケット情報を取得する関数
-    function fetchTickets() {
-      const idToken = liff.getIDToken(); // 【重要】セキュリティのためのIDトークン取得
+    // チケット使用ボタンを押した時の本番処理（パスワード確認付き）
+    function useTicket(ticketId) {
+      // 1. スタッフ専用のパスワード（暗証番号）を設定
+      const STAFF_PIN = '1234'; // ★ここを医院でお好きな4桁の数字に変更してください
 
-      // GASのdoPostへ送信するデータ
+      // 2. パスワード入力用ポップアップを表示
+      const userInput = prompt('【スタッフ専用】\n消込を行うための4桁の暗証番号を入力してください。\n※使用済みにすると元に戻せません。');
+
+      // キャンセルを押した、または何も入力しなかった場合は処理を中断
+      if (userInput === null || userInput === '') {
+        return; 
+      }
+
+      // 3. パスワードが間違っている場合はエラーを出して中断
+      if (userInput !== STAFF_PIN) {
+        alert('暗証番号が間違っています。消込をキャンセルしました。');
+        return;
+      }
+
+      // ======== ここから下は前回と同じ消込通信処理 ========
+
+      // 処理中の表示
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('loading').innerText = '消込処理中...';
+
+      // GASへ送るデータの準備
+      const idToken = liff.getIDToken();
       const payload = {
-        action: 'getTickets',
-        idToken: idToken
+        action: 'useTicket',
+        idToken: idToken,
+        ticketId: ticketId
       };
 
+      // GASへ通信
       fetch(GAS_URL, {
         method: 'POST',
-        // GASのCORS（通信制限）エラーを回避するため 'text/plain' を指定します
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       })
       .then(response => response.json())
       .then(data => {
-        document.getElementById('loading').style.display = 'none';
-        
         if (data.error) {
           alert(data.error);
+          document.getElementById('loading').style.display = 'none';
           return;
         }
-
-        renderTickets(data.tickets);
+        
+        // 消込成功時
+        alert('チケットを使用しました！');
+        document.getElementById('loading').innerText = '画面を更新しています...';
+        fetchTickets(); 
       })
       .catch(error => {
         console.error(error);
-        document.getElementById('loading').innerText = 'データの取得に失敗しました';
+        alert('通信エラーが発生しました');
+        document.getElementById('loading').style.display = 'none';
       });
     }
 
