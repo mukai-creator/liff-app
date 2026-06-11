@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>診察券アプリ</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; background-color: #f5f5f5; padding: 20px; }
+    h1 { font-size: 1.2rem; color: #333; }
+    .ticket-card {
+      background: #fff; border-radius: 8px; padding: 15px;
+      margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .ticket-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; }
+    .ticket-expiry { color: #e74c3c; font-size: 0.9rem; margin-bottom: 15px; }
+    .use-btn {
+      background-color: #06C755; color: white; border: none;
+      padding: 10px 15px; border-radius: 4px; width: 100%;
+      font-size: 1rem; cursor: pointer;
+    }
+    #loading { text-align: center; color: #666; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <h1>保有しているチケット</h1>
+  <div id="loading">読み込み中...</div>
+  <div id="ticket-list"></div>
+
+  <script>
+    // ★GASのウェブアプリURLをここに貼り付けます
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxXd8NMotfbSP-uZMMNYtOYiKHmxu4v1X2qogZqhn8oLE3HOD5G2nLdYGGXnYZHLB4O/exec';
+    
+    // ★後でLINE Developersで取得するLIFF IDをここに貼り付けます
+    const LIFF_ID = '★★★★★';
+
+    // 画面読み込み時にLIFFを初期化
+    document.addEventListener("DOMContentLoaded", () => {
+      liff.init({ liffId: LIFF_ID })
+        .then(() => {
+          if (!liff.isLoggedIn()) {
+            liff.login(); // LINE外で開かれた場合はログイン画面へ
+          } else {
+            fetchTickets(); // ログイン済みならチケットを取得
+          }
+        })
+        .catch((err) => {
+          console.error('LIFF Initialization failed', err);
+          document.getElementById('loading').innerText = 'エラーが発生しました';
+        });
+    });
+
+    // GASからチケット情報を取得する関数
+    function fetchTickets() {
+      const idToken = liff.getIDToken(); // 【重要】セキュリティのためのIDトークン取得
+
+      // GASのdoPostへ送信するデータ
+      const payload = {
+        action: 'getTickets',
+        idToken: idToken
+      };
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        // GASのCORS（通信制限）エラーを回避するため 'text/plain' を指定します
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        renderTickets(data.tickets);
+      })
+      .catch(error => {
+        console.error(error);
+        document.getElementById('loading').innerText = 'データの取得に失敗しました';
+      });
+    }
+
+    // 取得したチケットをHTMLに描画する関数
+    function renderTickets(tickets) {
+      const listDiv = document.getElementById('ticket-list');
+      if (tickets.length === 0) {
+        listDiv.innerHTML = '<p>現在使用できるチケットはありません。</p>';
+        return;
+      }
+
+      tickets.forEach(ticket => {
+        const card = document.createElement('div');
+        card.className = 'ticket-card';
+        card.innerHTML = `
+          <div class="ticket-title">${ticket.title}</div>
+          <div class="ticket-expiry">有効期限: ${ticket.expiry_date}</div>
+          <button class="use-btn" onclick="useTicket('${ticket.ticket_id}')">使用する</button>
+        `;
+        listDiv.appendChild(card);
+      });
+    }
+
+    // チケット使用ボタンを押した時の処理（今回はアラート表示のみの仮実装）
+    function useTicket(ticketId) {
+      if (confirm('スタッフの目の前で「OK」を押してください。')) {
+        alert('チケットID: ' + ticketId + ' の消込処理をGASに送ります（※消込ロジックは次回実装します！）');
+      }
+    }
+  </script>
+</body>
+</html>
