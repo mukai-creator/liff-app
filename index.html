@@ -55,6 +55,9 @@
     function fetchTickets() {
       const idToken = liff.getIDToken(); // 【重要】セキュリティのためのIDトークン取得
 
+      // ★追加：自分のLINE IDを画面にポップアップ表示させる★
+      alert("私のLINE IDは\n" + liff.getDecodedIDToken().sub);
+
       // GASのdoPostへ送信するデータ
       const payload = {
         action: 'getTickets',
