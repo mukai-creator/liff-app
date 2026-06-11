@@ -126,17 +126,27 @@
       }
 
       tickets.forEach(ticket => {
+        // ★新規追加：制限がある場合、注意書きのHTMLを生成する
+        let noteHtml = '';
+        if (ticket.interval_days > 0) {
+          noteHtml += `<div style="color: #e67e22; font-size: 0.85rem; margin-bottom: 3px;">※前回利用から ${ticket.interval_days} 日間は利用不可</div>`;
+        }
+        if (ticket.monthly_limit > 0) {
+          noteHtml += `<div style="color: #e67e22; font-size: 0.85rem; margin-bottom: 3px;">※同月内の利用は ${ticket.monthly_limit} 回まで</div>`;
+        }
+
         const card = document.createElement('div');
         card.className = 'ticket-card';
         card.innerHTML = `
           <div class="ticket-title">${ticket.title}</div>
           <div class="ticket-expiry">有効期限: ${ticket.expiry_date}</div>
-          <button class="use-btn" onclick="openPinModal('${ticket.ticket_id}')">使用する</button>
+          ${noteHtml}  <!-- 注意書きをここに挿入 -->
+          <button class="use-btn" style="margin-top: 10px;" onclick="openPinModal('${ticket.ticket_id}')">使用する</button>
         `;
         listDiv.appendChild(card);
       });
     }
-
+    
     // ★新規追加：利用履歴の描画関数
     function renderHistory(history) {
       const historyDiv = document.getElementById('history-list');
