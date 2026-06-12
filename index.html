@@ -6,10 +6,21 @@
   <title>診察券・処方箋アプリ</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { font-family: sans-serif; background-color: #fcf4f6; padding: 20px; }
-    h1 { font-size: 1.2rem; color: #e6437b; }
+    body { font-family: sans-serif; background-color: #fcf4f6; padding: 15px; margin: 0; }
+    h1 { font-size: 1.2rem; color: #e6437b; margin-top: 20px; border-bottom: 2px solid #f0b4c8; padding-bottom: 5px; }
     
-    /* アクティブなチケットのデザイン */
+    /* 上部の切り替えタブ（ナビゲーション） */
+    .nav-tabs {
+      display: flex; background: #fff; border-radius: 8px; overflow: hidden;
+      box-shadow: 0 2px 5px rgba(230, 67, 123, 0.1); margin-bottom: 20px;
+    }
+    .nav-tab {
+      flex: 1; text-align: center; padding: 12px 0; font-size: 0.95rem; font-weight: bold;
+      color: #999; cursor: pointer; transition: 0.3s;
+    }
+    .nav-tab.active { background-color: #e6437b; color: #fff; }
+
+    /* チケット＆履歴のデザイン */
     .ticket-card {
       background: #fff; border-radius: 8px; padding: 15px;
       margin-bottom: 15px; box-shadow: 0 2px 8px rgba(230, 67, 123, 0.15);
@@ -22,44 +33,39 @@
       padding: 10px 15px; border-radius: 4px; width: 100%;
       font-size: 1rem; cursor: pointer; font-weight: bold;
     }
-    
-    /* ★新規追加：デンタルグッズ処方箋のデザイン */
+
+    .history-card {
+      background: #fff; border-radius: 8px; padding: 12px 15px;
+      margin-bottom: 10px; color: #999; font-size: 0.9rem; border-left: 4px solid #ccc;
+    }
+    .history-title { font-weight: bold; margin-bottom: 5px; color: #666; }
+
+    /* グッズ処方箋のデザイン */
     .prescription-card {
       background: #fff; border-radius: 8px; padding: 15px;
       margin-bottom: 15px; box-shadow: 0 2px 8px rgba(230, 67, 123, 0.15);
-      border-left: 5px solid #f0b4c8; /* チケットと少し雰囲気を変えて、左側に優しいピンクのライン */
+      border-left: 5px solid #f0b4c8;
     }
-    .prescription-date { font-weight: bold; color: #555; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+    .prescription-date { font-weight: bold; color: #555; margin-bottom: 15px; border-bottom: 1px dashed #f0b4c8; padding-bottom: 5px;}
     .goods-item { margin-bottom: 15px; }
     .goods-name { font-weight: bold; color: #333; font-size: 1.05rem; }
-    .goods-desc { font-size: 0.85rem; color: #777; margin-bottom: 5px; }
+    .goods-desc { font-size: 0.85rem; color: #777; margin-bottom: 5px; line-height: 1.4; }
     .staff-comment { font-size: 0.9rem; color: #e6437b; background: #fff0f5; padding: 10px; border-radius: 6px; font-weight: bold; }
 
-    /* 使用済み履歴のデザイン */
-    .history-card {
-      background: #fff; border-radius: 8px; padding: 12px 15px;
-      margin-bottom: 10px; color: #999; font-size: 0.9rem;
-      border-left: 4px solid #ccc;
-    }
-    .history-title { font-weight: bold; margin-bottom: 5px; color: #666; }
-    
-    #loading { text-align: center; color: #e6437b; margin-top: 20px; font-weight: bold; }
+    #loading { text-align: center; color: #e6437b; margin-top: 40px; font-weight: bold; }
 
-    /* パスワード入力用ポップアップのデザイン */
+    /* モーダル（暗証番号） */
     #pin-modal {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6); z-index: 1000;
-      align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;
     }
     .modal-content {
-      background: #fff; padding: 20px; border-radius: 8px;
-      width: 80%; max-width: 300px; text-align: center;
+      background: #fff; padding: 20px; border-radius: 8px; width: 80%; max-width: 300px; text-align: center;
     }
     .modal-content p { font-size: 0.9rem; margin-bottom: 15px; color: #333; }
     #pin-input {
       font-size: 1.5rem; width: 120px; text-align: center; letter-spacing: 5px;
-      padding: 10px; margin-bottom: 20px; border: 2px solid #f0b4c8;
-      border-radius: 4px; outline: none;
+      padding: 10px; margin-bottom: 20px; border: 2px solid #f0b4c8; border-radius: 4px; outline: none;
     }
     #pin-input:focus { border-color: #e6437b; }
     .modal-buttons { display: flex; justify-content: space-between; }
@@ -69,15 +75,28 @@
 </head>
 <body>
 
-  <h1>保有しているチケット</h1>
   <div id="loading">読み込み中...</div>
-  <div id="ticket-list"></div>
 
-  <h1 style="margin-top: 30px; border-top: 2px dashed #f0b4c8; padding-top: 20px;">担当医からの処方箋</h1>
-  <div id="prescription-list"></div>
+  <div id="app-content" style="display: none;">
+    
+    <div class="nav-tabs">
+      <div id="tab-ticket" class="nav-tab active" onclick="switchView('ticket')">🎫 チケット・履歴</div>
+      <div id="tab-goods" class="nav-tab" onclick="switchView('goods')">🪥 おすすめグッズ</div>
+    </div>
 
-  <h1 style="margin-top: 30px; border-top: 2px dashed #f0b4c8; padding-top: 20px;">利用履歴</h1>
-  <div id="history-list"></div>
+    <div id="view-ticket">
+      <h1>保有しているチケット</h1>
+      <div id="ticket-list"></div>
+      <h1>利用履歴</h1>
+      <div id="history-list"></div>
+    </div>
+
+    <div id="view-goods" style="display: none;">
+      <h1>担当医からの処方箋</h1>
+      <div id="prescription-list"></div>
+    </div>
+
+  </div>
 
   <div id="pin-modal">
     <div class="modal-content">
@@ -95,6 +114,13 @@
     const LIFF_ID = '2010364442-cKVekudo';
 
     document.addEventListener("DOMContentLoaded", () => {
+      // ★URLの末尾（?page=goods など）を読み取って、最初に開く画面を決める
+      const urlParams = new URLSearchParams(window.location.search);
+      const startPage = urlParams.get('page'); 
+      if (startPage === 'goods') {
+        switchView('goods'); // リッチメニューから「グッズ」を指定されたらグッズ画面を開く
+      }
+
       liff.init({ liffId: LIFF_ID })
         .then(() => {
           if (!liff.isLoggedIn()) { liff.login(); } 
@@ -105,6 +131,21 @@
           document.getElementById('loading').innerText = 'エラーが発生しました';
         });
     });
+
+    // ★画面切り替え機能
+    function switchView(viewName) {
+      if (viewName === 'goods') {
+        document.getElementById('view-ticket').style.display = 'none';
+        document.getElementById('view-goods').style.display = 'block';
+        document.getElementById('tab-ticket').classList.remove('active');
+        document.getElementById('tab-goods').classList.add('active');
+      } else {
+        document.getElementById('view-ticket').style.display = 'block';
+        document.getElementById('view-goods').style.display = 'none';
+        document.getElementById('tab-ticket').classList.add('active');
+        document.getElementById('tab-goods').classList.remove('active');
+      }
+    }
 
     function fetchTickets() {
       const idToken = liff.getIDToken(); 
@@ -118,14 +159,12 @@
       .then(response => response.json())
       .then(data => {
         document.getElementById('loading').style.display = 'none';
-        if (data.error) {
-          alert(data.error);
-          return;
-        }
+        document.getElementById('app-content').style.display = 'block'; // ロード後に画面を表示
+
+        if (data.error) { alert(data.error); return; }
         
-        // データをそれぞれ描画する
         renderTickets(data.tickets);
-        renderPrescriptions(data.prescriptions); // ★新規追加
+        renderPrescriptions(data.prescriptions);
         renderHistory(data.history); 
       })
       .catch(error => {
@@ -134,24 +173,17 @@
       });
     }
 
-    // 保有チケットの描画
     function renderTickets(tickets) {
       const listDiv = document.getElementById('ticket-list');
       listDiv.innerHTML = ''; 
-
       if (!tickets || tickets.length === 0) {
         listDiv.innerHTML = '<p style="color:#888; font-size: 0.9rem;">現在使用できるチケットはありません。</p>';
         return;
       }
-
       tickets.forEach(ticket => {
         let noteHtml = '';
-        if (ticket.interval_days > 0) {
-          noteHtml += `<div style="color: #c0392b; font-size: 0.85rem; margin-bottom: 3px; font-weight: bold;">※前回利用から ${ticket.interval_days} 日間は利用不可</div>`;
-        }
-        if (ticket.monthly_limit > 0) {
-          noteHtml += `<div style="color: #c0392b; font-size: 0.85rem; margin-bottom: 3px; font-weight: bold;">※同月内の利用は ${ticket.monthly_limit} 回まで</div>`;
-        }
+        if (ticket.interval_days > 0) noteHtml += `<div style="color: #c0392b; font-size: 0.85rem; margin-bottom: 3px; font-weight: bold;">※前回利用から ${ticket.interval_days} 日間は利用不可</div>`;
+        if (ticket.monthly_limit > 0) noteHtml += `<div style="color: #c0392b; font-size: 0.85rem; margin-bottom: 3px; font-weight: bold;">※同月内の利用は ${ticket.monthly_limit} 回まで</div>`;
 
         const card = document.createElement('div');
         card.className = 'ticket-card';
@@ -165,21 +197,16 @@
       });
     }
     
-    // ★新規追加：処方箋の描画関数
     function renderPrescriptions(prescriptions) {
       const listDiv = document.getElementById('prescription-list');
       listDiv.innerHTML = ''; 
-
       if (!prescriptions || prescriptions.length === 0) {
         listDiv.innerHTML = '<p style="color:#888; font-size: 0.9rem;">現在、処方されているグッズはありません。</p>';
         return;
       }
-
-      // グループごとにカードを作成
       prescriptions.forEach(group => {
         const card = document.createElement('div');
         card.className = 'prescription-card';
-        
         let itemsHtml = '';
         group.items.forEach(item => {
           let commentHtml = item.staff_comment ? `<div class="staff-comment">💬 ${item.staff_comment}</div>` : '';
@@ -191,95 +218,59 @@
             </div>
           `;
         });
-
-        card.innerHTML = `
-          <div class="prescription-date">📅 処方日: ${group.prescribed_at}</div>
-          ${itemsHtml}
-        `;
+        card.innerHTML = `<div class="prescription-date">📅 処方日: ${group.prescribed_at}</div>${itemsHtml}`;
         listDiv.appendChild(card);
       });
     }
 
-    // 利用履歴の描画関数
     function renderHistory(history) {
-      const historyDiv = document.getElementById('history-list');
-      historyDiv.innerHTML = ''; 
-
+      const listDiv = document.getElementById('history-list');
+      listDiv.innerHTML = ''; 
       if (!history || history.length === 0) {
-        historyDiv.innerHTML = '<p style="color:#888; font-size: 0.9rem;">まだ利用履歴はありません。</p>';
+        listDiv.innerHTML = '<p style="color:#888; font-size: 0.9rem;">まだ利用履歴はありません。</p>';
         return;
       }
-
       history.forEach(item => {
         const card = document.createElement('div');
         card.className = 'history-card';
-        card.innerHTML = `
-          <div class="history-title">${item.title}</div>
-          <div>使用日時: ${item.used_at}</div>
-        `;
-        historyDiv.appendChild(card);
+        card.innerHTML = `<div class="history-title">${item.title}</div><div>使用日時: ${item.used_at}</div>`;
+        listDiv.appendChild(card);
       });
     }
 
     // --- ポップアップの制御処理 ---
     let currentTicketId = null;
-
     function openPinModal(ticketId) {
       currentTicketId = ticketId;
       document.getElementById('pin-input').value = ''; 
       document.getElementById('pin-modal').style.display = 'flex'; 
       document.getElementById('pin-input').focus(); 
     }
-
-    function closePinModal() {
-      document.getElementById('pin-modal').style.display = 'none';
-      currentTicketId = null;
-    }
-
+    function closePinModal() { document.getElementById('pin-modal').style.display = 'none'; currentTicketId = null; }
     function confirmPin() {
       const STAFF_PIN = '1234'; 
       const userInput = document.getElementById('pin-input').value;
-
-      if (userInput !== STAFF_PIN) {
-        alert('暗証番号が間違っています。');
-        return;
-      }
+      if (userInput !== STAFF_PIN) { alert('暗証番号が間違っています。'); return; }
 
       const requestTicketId = currentTicketId;
       closePinModal();
-
       document.getElementById('loading').style.display = 'block';
       document.getElementById('loading').innerText = '消込処理中...';
+      document.getElementById('app-content').style.display = 'none';
 
       const idToken = liff.getIDToken();
-      const payload = {
-        action: 'useTicket',
-        idToken: idToken,
-        ticketId: requestTicketId
-      };
-
       fetch(GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
+        method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'useTicket', idToken: idToken, ticketId: requestTicketId })
       })
       .then(response => response.json())
       .then(data => {
-        if (data.error) {
-          alert(data.error);
-          document.getElementById('loading').style.display = 'none';
-          return;
-        }
-        
+        if (data.error) { alert(data.error); document.getElementById('loading').style.display = 'none'; document.getElementById('app-content').style.display = 'block'; return; }
         alert('チケットを使用しました！');
         document.getElementById('loading').innerText = '画面を更新しています...';
         fetchTickets(); 
       })
-      .catch(error => {
-        console.error(error);
-        alert('通信エラーが発生しました');
-        document.getElementById('loading').style.display = 'none';
-      });
+      .catch(error => { console.error(error); alert('通信エラーが発生しました'); document.getElementById('loading').style.display = 'none'; document.getElementById('app-content').style.display = 'block'; });
     }
   </script>
 </body>
