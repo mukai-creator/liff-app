@@ -3,36 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>診察券アプリ</title>
+  <title>診察券・処方箋アプリ</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { font-family: sans-serif; background-color: #fcf4f6; /* 背景もほんのりピンクがかった色に変更 */ padding: 20px; }
-    h1 { font-size: 1.2rem; color: #e6437b; /* 見出しをテーマカラーに */ }
+    body { font-family: sans-serif; background-color: #fcf4f6; padding: 20px; }
+    h1 { font-size: 1.2rem; color: #e6437b; }
     
     /* アクティブなチケットのデザイン */
     .ticket-card {
-      background: #fff; 
-      border-radius: 8px; 
-      padding: 15px;
-      margin-bottom: 15px; 
-      box-shadow: 0 2px 8px rgba(230, 67, 123, 0.15); /* 影にも少しテーマカラーを混ぜて馴染ませる */
-      border-top: 5px solid #e6437b; /* 上部にテーマカラーの太線を引く */
+      background: #fff; border-radius: 8px; padding: 15px;
+      margin-bottom: 15px; box-shadow: 0 2px 8px rgba(230, 67, 123, 0.15);
+      border-top: 5px solid #e6437b;
     }
     .ticket-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; color: #333; }
     .ticket-expiry { color: #888; font-size: 0.9rem; margin-bottom: 15px; }
     .use-btn {
-      background-color: #e6437b; /* ボタンをテーマカラーに */
-      color: white; border: none;
+      background-color: #e6437b; color: white; border: none;
       padding: 10px 15px; border-radius: 4px; width: 100%;
-      font-size: 1rem; cursor: pointer;
-      font-weight: bold;
+      font-size: 1rem; cursor: pointer; font-weight: bold;
     }
     
+    /* ★新規追加：デンタルグッズ処方箋のデザイン */
+    .prescription-card {
+      background: #fff; border-radius: 8px; padding: 15px;
+      margin-bottom: 15px; box-shadow: 0 2px 8px rgba(230, 67, 123, 0.15);
+      border-left: 5px solid #f0b4c8; /* チケットと少し雰囲気を変えて、左側に優しいピンクのライン */
+    }
+    .prescription-date { font-weight: bold; color: #555; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+    .goods-item { margin-bottom: 15px; }
+    .goods-name { font-weight: bold; color: #333; font-size: 1.05rem; }
+    .goods-desc { font-size: 0.85rem; color: #777; margin-bottom: 5px; }
+    .staff-comment { font-size: 0.9rem; color: #e6437b; background: #fff0f5; padding: 10px; border-radius: 6px; font-weight: bold; }
+
     /* 使用済み履歴のデザイン */
     .history-card {
       background: #fff; border-radius: 8px; padding: 12px 15px;
       margin-bottom: 10px; color: #999; font-size: 0.9rem;
-      border-left: 4px solid #ccc; /* 履歴は控えめなグレーライン */
+      border-left: 4px solid #ccc;
     }
     .history-title { font-weight: bold; margin-bottom: 5px; color: #666; }
     
@@ -51,12 +58,10 @@
     .modal-content p { font-size: 0.9rem; margin-bottom: 15px; color: #333; }
     #pin-input {
       font-size: 1.5rem; width: 120px; text-align: center; letter-spacing: 5px;
-      padding: 10px; margin-bottom: 20px; border: 2px solid #f0b4c8; /* 枠線を薄いピンクに */
+      padding: 10px; margin-bottom: 20px; border: 2px solid #f0b4c8;
       border-radius: 4px; outline: none;
     }
-    #pin-input:focus {
-      border-color: #e6437b; /* 入力中は濃いピンクに */
-    }
+    #pin-input:focus { border-color: #e6437b; }
     .modal-buttons { display: flex; justify-content: space-between; }
     .btn-cancel { background: #bbb; color: white; border: none; padding: 10px; border-radius: 4px; width: 45%; cursor: pointer; font-weight: bold;}
     .btn-confirm { background: #e6437b; color: white; border: none; padding: 10px; border-radius: 4px; width: 45%; cursor: pointer; font-weight: bold; }
@@ -67,6 +72,9 @@
   <h1>保有しているチケット</h1>
   <div id="loading">読み込み中...</div>
   <div id="ticket-list"></div>
+
+  <h1 style="margin-top: 30px; border-top: 2px dashed #f0b4c8; padding-top: 20px;">担当医からの処方箋</h1>
+  <div id="prescription-list"></div>
 
   <h1 style="margin-top: 30px; border-top: 2px dashed #f0b4c8; padding-top: 20px;">利用履歴</h1>
   <div id="history-list"></div>
@@ -83,7 +91,6 @@
   </div>
 
   <script>
-    // ★ご自身のURL・IDが入っているか念のため確認してください
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbxXd8NMotfbSP-uZMMNYtOYiKHmxu4v1X2qogZqhn8oLE3HOD5G2nLdYGGXnYZHLB4O/exec';
     const LIFF_ID = '2010364442-cKVekudo';
 
@@ -116,8 +123,9 @@
           return;
         }
         
-        // ★保有チケットと履歴の両方を画面に描画する
+        // データをそれぞれ描画する
         renderTickets(data.tickets);
+        renderPrescriptions(data.prescriptions); // ★新規追加
         renderHistory(data.history); 
       })
       .catch(error => {
@@ -131,13 +139,12 @@
       const listDiv = document.getElementById('ticket-list');
       listDiv.innerHTML = ''; 
 
-      if (tickets.length === 0) {
+      if (!tickets || tickets.length === 0) {
         listDiv.innerHTML = '<p style="color:#888; font-size: 0.9rem;">現在使用できるチケットはありません。</p>';
         return;
       }
 
       tickets.forEach(ticket => {
-        // 制限がある場合、注意書きのHTMLを生成する（文字色も統一感を出すため少し赤みの強い色に調整）
         let noteHtml = '';
         if (ticket.interval_days > 0) {
           noteHtml += `<div style="color: #c0392b; font-size: 0.85rem; margin-bottom: 3px; font-weight: bold;">※前回利用から ${ticket.interval_days} 日間は利用不可</div>`;
@@ -151,18 +158,54 @@
         card.innerHTML = `
           <div class="ticket-title">${ticket.title}</div>
           <div class="ticket-expiry">有効期限: ${ticket.expiry_date}</div>
-          ${noteHtml}  <button class="use-btn" style="margin-top: 10px;" onclick="openPinModal('${ticket.ticket_id}')">使用する</button>
+          ${noteHtml}
+          <button class="use-btn" style="margin-top: 10px;" onclick="openPinModal('${ticket.ticket_id}')">使用する</button>
         `;
         listDiv.appendChild(card);
       });
     }
     
+    // ★新規追加：処方箋の描画関数
+    function renderPrescriptions(prescriptions) {
+      const listDiv = document.getElementById('prescription-list');
+      listDiv.innerHTML = ''; 
+
+      if (!prescriptions || prescriptions.length === 0) {
+        listDiv.innerHTML = '<p style="color:#888; font-size: 0.9rem;">現在、処方されているグッズはありません。</p>';
+        return;
+      }
+
+      // グループごとにカードを作成
+      prescriptions.forEach(group => {
+        const card = document.createElement('div');
+        card.className = 'prescription-card';
+        
+        let itemsHtml = '';
+        group.items.forEach(item => {
+          let commentHtml = item.staff_comment ? `<div class="staff-comment">💬 ${item.staff_comment}</div>` : '';
+          itemsHtml += `
+            <div class="goods-item">
+              <div class="goods-name">🦷 ${item.goods_name}</div>
+              <div class="goods-desc">${item.description}</div>
+              ${commentHtml}
+            </div>
+          `;
+        });
+
+        card.innerHTML = `
+          <div class="prescription-date">📅 処方日: ${group.prescribed_at}</div>
+          ${itemsHtml}
+        `;
+        listDiv.appendChild(card);
+      });
+    }
+
     // 利用履歴の描画関数
     function renderHistory(history) {
       const historyDiv = document.getElementById('history-list');
       historyDiv.innerHTML = ''; 
 
-      if (history.length === 0) {
+      if (!history || history.length === 0) {
         historyDiv.innerHTML = '<p style="color:#888; font-size: 0.9rem;">まだ利用履歴はありません。</p>';
         return;
       }
@@ -194,7 +237,7 @@
     }
 
     function confirmPin() {
-      const STAFF_PIN = '1234'; // ★ここを医院の暗証番号に変更してください
+      const STAFF_PIN = '1234'; 
       const userInput = document.getElementById('pin-input').value;
 
       if (userInput !== STAFF_PIN) {
@@ -230,7 +273,7 @@
         
         alert('チケットを使用しました！');
         document.getElementById('loading').innerText = '画面を更新しています...';
-        fetchTickets(); // 画面を更新すると、チケットが消えて履歴側に移動します！
+        fetchTickets(); 
       })
       .catch(error => {
         console.error(error);
