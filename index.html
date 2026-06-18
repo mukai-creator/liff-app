@@ -285,37 +285,41 @@
       });
     }
     
-    // 処方箋の描画（最新の処方が上に来るように修正）
-function renderPrescriptions(prescriptions) {
-  const listDiv = document.getElementById('prescription-list');
-  listDiv.innerHTML = ''; 
-  if (!prescriptions || prescriptions.length === 0) {
-    listDiv.innerHTML = '<p style="color:#888; font-size: 0.9rem;">現在、処方されているグッズはありません。</p>';
-    return;
-  }
+   // 処方箋の描画
+    function renderPrescriptions(prescriptions) {
+      const listDiv = document.getElementById('prescription-list');
+      listDiv.innerHTML = ''; 
+      if (!prescriptions || prescriptions.length === 0) {
+        listDiv.innerHTML = '<p style="color:#888; font-size: 0.9rem;">現在、処方されているグッズはありません。</p>';
+        return;
+      }
 
-  // ★ここで逆順にする（最新の処方グループが配列の先頭に来ます）
-  const sortedPrescriptions = [...prescriptions].reverse();
+      // ★ 追加：処方日のグループ（外側の配列）だけを逆順にする
+      // これにより「新しい日付」が一番上に来ます
+      const reversedPrescriptions = [...prescriptions].reverse();
 
-  sortedPrescriptions.forEach(group => {
-    const card = document.createElement('div');
-    card.className = 'prescription-card';
-    let itemsHtml = '';
-    group.items.forEach(item => {
-      let commentHtml = item.staff_comment ? `<div style="color:#00b5ad; font-size:0.85rem; margin-top:5px;">💬 ${item.staff_comment}</div>` : '';
-      itemsHtml += `
-        <div style="border-bottom: 1px dashed #eee; padding: 10px 0;">
-          <div style="font-weight:bold;">🦷 ${item.goods_name}</div>
-          <div style="font-size:0.85rem; color:#666;">${item.description}</div>
-          ${commentHtml}
-        </div>
-      `;
-    });
-    card.innerHTML = `<div style="font-weight:bold; margin-bottom:10px; color:#555;">📅 処方日: ${group.prescribed_at}</div>${itemsHtml}`;
-    listDiv.appendChild(card);
-  });
-}
-
+      // 元の prescriptions ではなく reversedPrescriptions をループにかけます
+      reversedPrescriptions.forEach(group => {
+        const card = document.createElement('div');
+        card.className = 'prescription-card';
+        let itemsHtml = '';
+        
+        // ★ 同日内のアイテム順はそのまま維持されます
+        group.items.forEach(item => {
+          let commentHtml = item.staff_comment ? `<div style="color:#00b5ad; font-size:0.85rem; margin-top:5px;">💬 ${item.staff_comment}</div>` : '';
+          itemsHtml += `
+            <div style="border-bottom: 1px dashed #eee; padding: 10px 0;">
+              <div style="font-weight:bold;">🦷 ${item.goods_name}</div>
+              <div style="font-size:0.85rem; color:#666;">${item.description}</div>
+              ${commentHtml}
+            </div>
+          `;
+        });
+        card.innerHTML = `<div style="font-weight:bold; margin-bottom:10px; color:#555;">📅 処方日: ${group.prescribed_at}</div>${itemsHtml}`;
+        listDiv.appendChild(card);
+      });
+    }
+    
     // 履歴の描画
     function renderHistory(history) {
       const listDiv = document.getElementById('history-list');
