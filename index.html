@@ -58,7 +58,7 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* 以前のチケット等のCSS（必要に応じて調整してください） */
+    /* 以前のチケット等のCSS */
     .ticket-card, .prescription-card, .history-card {
       background: #fff;
       border-radius: 8px;
@@ -91,19 +91,22 @@
   <div id="app-content" style="display: none;">
     
     <div class="tab-menu">
-      <button class="tab-button active" onclick="switchTab('main-tab', this)">チケット・処方箋</button>
+      <button class="tab-button active" onclick="switchTab('ticket-tab', this)">チケット</button>
+      <button class="tab-button" onclick="switchTab('prescription-tab', this)">処方</button>
       <button class="tab-button" onclick="switchTab('gbt-tab', this)">GBT記録</button>
     </div>
 
-    <div id="main-tab" class="tab-content active">
+    <div id="ticket-tab" class="tab-content active">
       <h3 style="color: #555; border-bottom: 2px solid #eee; padding-bottom: 5px;">🎟️ チケット</h3>
       <div id="ticket-list"></div>
 
-      <h3 style="color: #555; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 30px;">🦷 デンタルグッズ処方箋</h3>
-      <div id="prescription-list"></div>
-
       <h3 style="color: #555; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 30px;">📅 チケット利用履歴</h3>
       <div id="history-list"></div>
+    </div>
+
+    <div id="prescription-tab" class="tab-content">
+      <h3 style="color: #555; border-bottom: 2px solid #eee; padding-bottom: 5px;">🦷 デンタルグッズ処方箋</h3>
+      <div id="prescription-list"></div>
     </div>
 
     <div id="gbt-tab" class="tab-content">
@@ -148,7 +151,7 @@
     const LIFF_ID = '2010364442-cKVekudo';
 
     // ------------------------------------------
-    // 1. 初期化処理（1つに統合）
+    // 1. 初期化処理
     // ------------------------------------------
     document.addEventListener("DOMContentLoaded", () => {
       liff.init({ liffId: LIFF_ID })
@@ -166,7 +169,7 @@
     });
 
     // ------------------------------------------
-    // 2. データ取得処理（全てのデータを一括取得）
+    // 2. データ取得処理
     // ------------------------------------------
     function fetchData() {
       const idToken = liff.getIDToken(); 
@@ -179,18 +182,15 @@
       })
       .then(response => response.json())
       .then(data => {
-        // ロード画面を隠してアプリ画面を表示
         document.getElementById('loading').style.display = 'none';
         document.getElementById('app-content').style.display = 'block';
 
         if (data.error) { alert(data.error); return; }
         
-        // 各種データの描画
         renderTickets(data.tickets);
         renderPrescriptions(data.prescriptions);
         renderHistory(data.history); 
         
-        // GBTデータの描画を追加
         if (data.gbt) {
           renderGbt(data.gbt);
         }
@@ -368,7 +368,7 @@
         }
         alert('チケットを使用しました！');
         document.getElementById('loading').innerText = '画面を更新しています...';
-        fetchData(); // 画面を再読み込み
+        fetchData(); 
       })
       .catch(error => { 
         console.error(error); 
