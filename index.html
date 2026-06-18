@@ -3,115 +3,241 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>患者様専用アプリ</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <title>マイページ</title>
+
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
   <style>
-    body { font-family: sans-serif; background-color: #fcf4f6; padding: 15px; margin: 0; }
-    h1 { font-size: 1.2rem; color: #e6437b; margin-top: 20px; border-bottom: 2px solid #f0b4c8; padding-bottom: 5px; }
-    
-    /* 上部の切り替えタブ（ナビゲーション） */
-    .nav-tabs {
-      display: flex; background: #fff; border-radius: 8px; overflow: hidden;
-      box-shadow: 0 2px 5px rgba(230, 67, 123, 0.1); margin-bottom: 20px;
+    /* ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝
+       タブ＆ベースのCSS 
+    ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ ＝ */
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 15px;
+      color: #333;
     }
-    .nav-tab {
-      flex: 1; text-align: center; padding: 12px 0; font-size: 0.95rem; font-weight: bold;
-      color: #999; cursor: pointer; transition: 0.3s;
+    .card {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .nav-tab.active { background-color: #e6437b; color: #fff; }
-
-    /* チケット＆履歴のデザイン */
-    .ticket-card {
-      background: #fff; border-radius: 8px; padding: 15px;
-      margin-bottom: 15px; box-shadow: 0 2px 8px rgba(230, 67, 123, 0.15);
-      border-top: 5px solid #e6437b;
+    .tab-menu {
+      display: flex;
+      border-bottom: 2px solid #eeeeee;
+      margin-bottom: 20px;
     }
-    .ticket-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; color: #333; }
-    .ticket-expiry { color: #888; font-size: 0.9rem; margin-bottom: 15px; }
-    .use-btn {
-      background-color: #e6437b; color: white; border: none;
-      padding: 10px 15px; border-radius: 4px; width: 100%;
-      font-size: 1rem; cursor: pointer; font-weight: bold;
+    .tab-button {
+      flex: 1;
+      padding: 12px 0;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: bold;
+      color: #999999;
+      font-size: 15px;
+      transition: all 0.3s ease;
     }
-
-    .history-card {
-      background: #fff; border-radius: 8px; padding: 12px 15px;
-      margin-bottom: 10px; color: #999; font-size: 0.9rem; border-left: 4px solid #ccc;
+    .tab-button.active {
+      color: #00b5ad; /* 医院様のテーマカラー */
+      border-bottom: 3px solid #00b5ad;
     }
-    .history-title { font-weight: bold; margin-bottom: 5px; color: #666; }
-
-    /* グッズ処方箋のデザイン */
-    .prescription-card {
-      background: #fff; border-radius: 8px; padding: 15px;
-      margin-bottom: 15px; box-shadow: 0 2px 8px rgba(230, 67, 123, 0.15);
-      border-left: 5px solid #f0b4c8;
+    .tab-content {
+      display: none;
     }
-    .prescription-date { font-weight: bold; color: #555; margin-bottom: 15px; border-bottom: 1px dashed #f0b4c8; padding-bottom: 5px;}
-    .goods-item { margin-bottom: 15px; }
-    .goods-name { font-weight: bold; color: #333; font-size: 1.05rem; }
-    .goods-desc { font-size: 0.85rem; color: #777; margin-bottom: 5px; line-height: 1.4; }
-    .staff-comment { font-size: 0.9rem; color: #e6437b; background: #fff0f5; padding: 10px; border-radius: 6px; font-weight: bold; }
-
-    #loading { text-align: center; color: #e6437b; margin-top: 40px; font-weight: bold; }
-
-    /* モーダル（暗証番号） */
-    #pin-modal {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
     }
-    .modal-content {
-      background: #fff; padding: 20px; border-radius: 8px; width: 80%; max-width: 300px; text-align: center;
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    .modal-content p { font-size: 0.9rem; margin-bottom: 15px; color: #333; }
-    #pin-input {
-      font-size: 1.5rem; width: 120px; text-align: center; letter-spacing: 5px;
-      padding: 10px; margin-bottom: 20px; border: 2px solid #f0b4c8; border-radius: 4px; outline: none;
-    }
-    #pin-input:focus { border-color: #e6437b; }
-    .modal-buttons { display: flex; justify-content: space-between; }
-    .btn-cancel { background: #bbb; color: white; border: none; padding: 10px; border-radius: 4px; width: 45%; cursor: pointer; font-weight: bold;}
-    .btn-confirm { background: #e6437b; color: white; border: none; padding: 10px; border-radius: 4px; width: 45%; cursor: pointer; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <div id="loading">読み込み中...</div>
-
-  <div id="app-content" style="display: none;">
-    
-    <div class="nav-tabs">
-      <div id="tab-ticket" class="nav-tab active" onclick="switchView('ticket')">🎫 チケット・履歴</div>
-      <div id="tab-goods" class="nav-tab" onclick="switchView('goods')">🪥 おすすめグッズ</div>
-    </div>
-
-    <div id="view-ticket">
-      <h1>保有しているチケット</h1>
-      <div id="ticket-list"></div>
-      <h1>利用履歴</h1>
-      <div id="history-list"></div>
-    </div>
-
-    <div id="view-goods" style="display: none;">
-      <h1>歯科衛生士からの処方箋</h1>
-      <div id="prescription-list"></div>
-    </div>
-
+  <div class="tab-menu">
+    <button class="tab-button active" onclick="switchTab('main-tab', this)">チケット・処方箋</button>
+    <button class="tab-button" onclick="switchTab('gbt-tab', this)">GBT記録</button>
   </div>
 
-  <div id="pin-modal">
-    <div class="modal-content">
-      <p>【スタッフ専用】<br>消込のための4桁の暗証番号を入力してください。</p>
-      <input type="text" id="pin-input" inputmode="numeric" pattern="\d*" maxlength="4" placeholder="----">
-      <div class="modal-buttons">
-        <button class="btn-cancel" onclick="closePinModal()">キャンセル</button>
-        <button class="btn-confirm" onclick="confirmPin()">消込する</button>
+  <div id="main-tab" class="tab-content active">
+    <div id="ticket-container"></div>
+    <div id="prescription-container"></div>
+    </div>
+
+  <div id="gbt-tab" class="tab-content">
+    <div class="card" id="gbt-container">
+      
+      <div id="gbt-empty-message" style="display: none; text-align: center; padding: 30px 0; color: #999;">
+        まだGBTの記録がありません。<br>初回のメンテナンスをお待ちしております！
       </div>
+
+      <div id="gbt-data-area" style="display: none; text-align: center;">
+        <h3 style="color: #00b5ad; margin-top: 0;">✨ GBT プロフェッショナルケア</h3>
+        <div style="margin: 15px 0;">
+          <p style="margin: 0; color: #666; font-size: 14px;">現在の通院回数</p>
+          <div style="font-size: 32px; font-weight: bold; color: #333;">
+            <span id="gbt-count-number">0</span> <span style="font-size: 18px;">回</span>
+          </div>
+          <p id="gbt-message" style="margin: 5px 0 0 0; font-size: 14px; font-weight: bold; color: #e83e8c;"></p>
+        </div>
+        <div style="text-align: left; margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc;">
+          <p style="margin: 0 0 10px 0; font-weight: bold; color: #555;">📅 メンテナンス履歴</p>
+          <ul id="gbt-history-list" style="list-style-type: none; padding: 0; margin: 0; font-size: 14px; color: #555;"></ul>
+        </div>
+      </div>
+
     </div>
   </div>
 
   <script>
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbxXd8NMotfbSP-uZMMNYtOYiKHmxu4v1X2qogZqhn8oLE3HOD5G2nLdYGGXnYZHLB4O/exec';
     const LIFF_ID = '2010364442-cKVekudo';
+
+    // ------------------------------------------
+    // 1. LIFF初期化とデータ取得の流れ
+    // ------------------------------------------
+    window.onload = function() {
+      liff.init({ liffId: LIFF_ID })
+        .then(() => {
+          if (liff.isLoggedIn()) {
+            liff.getProfile().then(profile => {
+              fetchDataFromGAS(profile.userId, profile.displayName);
+            });
+          } else {
+            liff.login();
+          }
+        })
+        .catch(err => console.error('LIFF初期化エラー', err));
+    };
+
+    function fetchDataFromGAS(userId, displayName) {
+      // GASへ送るデータ
+      const payload = {
+        action: 'getTickets',
+        userId: userId,
+        displayName: displayName
+      };
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        // ※以前のGASの受け取り方に合わせています（JSON.stringifyの場合とx-www-form-urlencodedの場合があります）
+        body: JSON.stringify(payload)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          
+          // ▼▼▼ 今までのチケット・処方箋の描画関数を呼び出す ▼▼▼
+          // 例: 
+          // renderTickets(data.tickets);
+          // renderPrescriptions(data.prescriptions);
+          // ▲▲▲ 今までのチケット・処方箋の描画関数を呼び出す ▲▲▲
+          
+          // ★ 今回追加したGBTの描画処理をここで呼び出します！ ★
+          if (data.gbt) {
+            renderGbt(data.gbt);
+          }
+
+        }
+      })
+      .catch(error => console.error('データ取得エラー:', error));
+    }
+
+
+    // ------------------------------------------
+    // 2. タブ切り替え処理
+    // ------------------------------------------
+    function switchTab(tabId, clickedButton) {
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      clickedButton.classList.add('active');
+    }
+
+    // ------------------------------------------
+    // 3. GBTデータの描画とお祝いアニメーション
+    // ------------------------------------------
+    function renderGbt(gbtData) {
+      const emptyMsgEl = document.getElementById('gbt-empty-message');
+      const dataAreaEl = document.getElementById('gbt-data-area');
+
+      // 記録が0回の場合
+      if (!gbtData || gbtData.count === 0) {
+        emptyMsgEl.style.display = 'block';
+        dataAreaEl.style.display = 'none';
+        return;
+      }
+      
+      // 記録が1回以上の場合
+      emptyMsgEl.style.display = 'none';
+      dataAreaEl.style.display = 'block';
+
+      document.getElementById('gbt-count-number').innerText = gbtData.count;
+
+      const nextGoal = Math.ceil((gbtData.count + 0.1) / 5) * 5; 
+      const remain = nextGoal - gbtData.count;
+      const msgEl = document.getElementById('gbt-message');
+      
+      if (gbtData.count % 5 === 0) {
+        msgEl.innerText = `素晴らしい継続です！${gbtData.count}回目の記念日ですね🎉`;
+      } else {
+        msgEl.innerText = `次の目標（${nextGoal}回目）まであと ${remain} 回！`;
+      }
+
+      const listEl = document.getElementById('gbt-history-list');
+      listEl.innerHTML = '';
+      gbtData.logs.forEach(log => {
+        const li = document.createElement('li');
+        li.style.padding = '5px 0';
+        li.style.borderBottom = '1px solid #eee';
+        li.innerText = `✅ ${log.date} （${log.session_number}回目）`;
+        listEl.appendChild(li);
+      });
+
+      // 5の倍数で、まだ祝っていない場合のみ紙吹雪を降らせる
+      if (gbtData.count > 0 && gbtData.count % 5 === 0) {
+        const storageKey = 'gbt_celebrated_' + gbtData.count;
+        if (!localStorage.getItem(storageKey)) {
+          fireConfetti();
+          localStorage.setItem(storageKey, 'true'); 
+        }
+      }
+    }
+
+    // ------------------------------------------
+    // 4. 紙吹雪を降らせる関数
+    // ------------------------------------------
+    function fireConfetti() {
+      var duration = 4 * 1000;
+      var animationEnd = Date.now() + duration;
+      var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+      function randomInRange(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+
+      var interval = setInterval(function() {
+        var timeLeft = animationEnd - Date.now();
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+        var particleCount = 50 * (timeLeft / duration);
+        
+        confetti(Object.assign({}, defaults, { particleCount,
+          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+        }));
+        confetti(Object.assign({}, defaults, { particleCount,
+          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+        }));
+      }, 250);
+    }
 
     document.addEventListener("DOMContentLoaded", () => {
       // ★URLの末尾（?page=goods など）を読み取って、最初に開く画面を決める
