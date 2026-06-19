@@ -294,17 +294,28 @@
         return;
       }
 
-      // ★ 追加：処方日のグループ（外側の配列）だけを逆順にする
-      // これにより「新しい日付」が一番上に来ます
-      const reversedPrescriptions = [...prescriptions].reverse();
+      // ★ 修正：精密な並び替え処理
+      // 基本は日付の新しい順、同じ日付なら後から登録されたもの（新しい処方）を上にします
+      const sortedPrescriptions = prescriptions
+        .map((group, index) => ({ group, index }))
+        .sort((a, b) => {
+          const dateA = new Date(a.group.prescribed_at);
+          const dateB = new Date(b.group.prescribed_at);
+          
+          // 1. 日付が違う場合は、新しい日付を上にする
+          if (dateA.getTime() !== dateB.getTime()) {
+            return dateB - dateA;
+          }
+          // 2. 日付が同じ場合は、元々の順番（インデックス）が後ろのもの（＝新しい処方）を上にする
+          return b.index - a.index;
+        })
+        .map(item => item.group);
 
-      // 元の prescriptions ではなく reversedPrescriptions をループにかけます
-      reversedPrescriptions.forEach(group => {
+      // 並び替え完了した sortedPrescriptions で画面を描画
+      sortedPrescriptions.forEach(group => {
         const card = document.createElement('div');
         card.className = 'prescription-card';
         let itemsHtml = '';
-        
-        // ★ 同日内のアイテム順はそのまま維持されます
         group.items.forEach(item => {
           let commentHtml = item.staff_comment ? `<div style="color:#00b5ad; font-size:0.85rem; margin-top:5px;">💬 ${item.staff_comment}</div>` : '';
           itemsHtml += `
